@@ -63,10 +63,14 @@
   </style>
 </head>
 <body>
+    <audio id="selectSound" src="click-self.mp3"></audio>
+    <audio id="moveSound" src="move-self.mp3"></audio>
+    <audio id="promoteSound" src="promote-self.mp3"></audio>
+    <audio id="captureSound" src="capture.mp3"></audio>
 
-<div class="board" id="chessBoard">
-  <!-- Chess board cells will be dynamically generated here -->
-</div>
+    <div class="board" id="chessBoard">
+        <!-- Chess board cells will be dynamically generated here -->
+    </div>
 
 <script>
 let selectedPiece = null;
@@ -81,7 +85,11 @@ const PIECES = {
     PAWN: '♙',
 };
 
-// Generate the chessboard with flipped pieces
+function playSound(soundStr) {
+    const Sound = document.getElementById(soundStr);
+    Sound.play();
+}
+
 function generateChessboard() {
     const board = document.getElementById('chessBoard');
     const pieces = ['♖', '♗', '♕', '♔', '♗', '♖'].reverse(); // Reverse the order of white pieces
@@ -116,6 +124,11 @@ function selectPiece(event) {
     const allCells = document.querySelectorAll('.cell');
     allCells.forEach(cell => cell.classList.remove('possible-move'));
 
+    // Plays a sound for selecting a piece
+    if (cell.classList.contains(playerClass)) {
+        playSound("selectSound"); // Play selecting sound
+    }
+
     // If a piece is already selected, and the clicked cell contains the player's own piece,
     // then select the new piece instead
     if (selectedPiece && cell.classList.contains(playerClass)) {
@@ -133,7 +146,8 @@ function selectPiece(event) {
         selectedPiece.classList.remove('selected');
         selectedPiece = null;
     } else {
-        if (cell.classList.contains(playerClass) || cell.textContent === '') {
+        if (cell.classList.contains(playerClass)) {
+            playSound("selectSound"); // Play sound
             selectedPiece = cell;
             selectedPiece.classList.add('selected');
             highlightPossibleMoves(selectedPiece);
@@ -184,13 +198,23 @@ function movePiece(selectedPiece, newRow, newCol) {
 
             // Move the piece
             targetCell.textContent = pieceType;
+
+            // Promotion: If a pawn reaches the opposite end, promote it to a queen
+            if ((pieceType === PIECES.PAWN && newRow === (currentPlayer === 'white' ? 0 : 5))) {
+                targetCell.textContent = PIECES.QUEEN;
+                playSound("promoteSound"); // Play promote sound
+            }
+            else if (targetCell.classList.contains(opposingPlayerClass)) {
+                // Check if the target cell contains the opposing player's piece color class
+                targetCell.classList.remove(opposingPlayerClass); // Remove the opposing player's color class
+                playSound("captureSound"); // Play capture sound
+            }
+            else {
+                playSound("moveSound"); // Play move sound
+            }
+
             selectedPiece.textContent = '';
             selectedPiece.classList.remove('selected');
-            
-            // Check if the target cell contains the opposing player's piece color class
-            if (targetCell.classList.contains(opposingPlayerClass)) {
-                targetCell.classList.remove(opposingPlayerClass); // Remove the opposing player's color class
-            }
             
             // Add the current player's color class to the target cell
             targetCell.classList.add(currentPlayerClass);
