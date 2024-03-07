@@ -67,6 +67,8 @@
     <audio id="moveSound" src="move-self.mp3"></audio>
     <audio id="promoteSound" src="promote-self.mp3"></audio>
     <audio id="captureSound" src="capture.mp3"></audio>
+    <audio id="illegalMoveSound" src="illegal-move.mp3"></audio>
+    <audio id="checkSound" src="move-check.mp3"></audio>
 
     <div class="board" id="chessBoard">
         <!-- Chess board cells will be dynamically generated here -->
@@ -86,7 +88,7 @@ const PIECES = {
 };
 
 function playSound(soundStr) {
-    const Sound = document.getElementById(soundStr);
+     const Sound = document.getElementById(soundStr);
     Sound.play();
 }
 
@@ -172,24 +174,42 @@ function highlightPossibleMoves(selectedPiece) {
             return; // Skip this cell
         }
 
-        // Make a hypothetical move
-        const pieceAtTargetCell = cell.textContent;
-        const pieceAtSelectedCell = selectedPiece.textContent;
-        cell.textContent = pieceType;
-        selectedPiece.textContent = '';
-
-        // Check if the king is safe after the hypothetical move
-        const kingSafe = !isCurrentPlayerKingInCheck();
-
-        // Undo the hypothetical move
-        cell.textContent = pieceAtTargetCell;
-        selectedPiece.textContent = pieceAtSelectedCell;
-
-        // If the move is valid and the king is safe, highlight it
-        if (checkValidMove(pieceType, selectedRow, selectedCol, newRow, newCol) && kingSafe) {
-            cell.classList.add('possible-move');
+        // Simulate the move and check if it puts the king in check
+        if (checkValidMove(pieceType, selectedRow, selectedCol, newRow, newCol)) {
+            const kingInCheck = isMovePuttingKingInCheck(selectedPiece, newRow, newCol);
+            if (!kingInCheck) {
+                cell.classList.add('possible-move');
+            }
         }
     });
+}
+
+function isMovePuttingKingInCheck(selectedPiece, newRow, newCol) {
+    const pieceType = selectedPiece.textContent;
+    const currentPlayerClass = currentPlayer === 'white' ? 'white-piece' : 'black-piece';
+    const opposingPlayerClass = currentPlayer === 'white' ? 'black-piece' : 'white-piece';
+    let capturedPiece = ''; // Variable to store the captured piece
+    
+    // Simulate the move
+    const originalPieceRow = parseInt(selectedPiece.dataset.row);
+    const originalPieceCol = parseInt(selectedPiece.dataset.col);
+    const selectedPieceContent = selectedPiece.textContent;
+    selectedPiece.textContent = '';
+    const targetCell = document.querySelector(`.cell[data-row='${newRow}'][data-col='${newCol}']`);
+    const originalTargetContent = targetCell.textContent;
+    const originalTargetClass = targetCell.classList.value;
+    targetCell.textContent = pieceType;
+    targetCell.classList.add(currentPlayerClass);
+
+    // Check if the current player's king is in check after the move
+    const kingInCheck = isCurrentPlayerKingInCheck();
+    
+    // Restore the board to its original state
+    targetCell.textContent = originalTargetContent;
+    selectedPiece.textContent = selectedPieceContent;
+    targetCell.className = originalTargetClass;
+
+    return kingInCheck;
 }
 
 // Move a piece
@@ -248,7 +268,7 @@ function movePiece(selectedPiece, newRow, newCol) {
 
             // Check if the current player's king is in check after the move
             if (isCurrentPlayerKingInCheck()) {
-                alert("Your king is in check!"); // Alert the player
+                playSound("illegalMoveSound");
                 
                 // Restore the captured piece
                 if (capturedPiece !== '') {
@@ -262,14 +282,18 @@ function movePiece(selectedPiece, newRow, newCol) {
                 targetCell.textContent = capturedPiece;
                 selectedPiece.classList.add('selected');
                 return; // Exit the function without changing player turn
-            }   
-            
+            }
+
             // Change player turn
             currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
 
-            if (isCheckmate()) {
-                alert("Checkmate, " + opponentPlayer + " WON!");
+            // Check for check and checkmate
+            if (isCurrentPlayerKingInCheck) {
+                playSound("checkSound");
             }
+        }
+        else {
+            playSound("illegalMoveSound");
         }
     }
 }
@@ -298,6 +322,17 @@ function isValidPawnMove(selectedRow, selectedCol, newRow, newCol) {
     const initialRow = currentPlayer === 'white' ? 4 : 1; // Initial row for white and black pawns
     const isInitialMove = selectedRow === initialRow; // Check if it's the pawn's initial move
 
+    // Check if the pawn is capturing one cell diagonally
+    if (Math.abs(newCol - selectedCol) === 1 && newRow === selectedRow + direction) {
+        const targetCell = document.querySelector(`.cell[data-row='${newRow}'][data-col='${newCol}']`);
+        const opposingPlayerClass = currentPlayer === 'white' ? 'black-piece' : 'white-piece';
+
+        // Check if there's an opposing piece in the diagonal cell
+        if (targetCell.classList.contains(opposingPlayerClass)) {
+            return true; // Allow capturing
+        }
+    }
+
     // Check if it's the pawn's initial move and it's moving two squares forward
     if (isInitialMove && newCol === selectedCol && newRow === selectedRow + (2 * direction)) {
         // Check if there is a piece in the intermediate cell
@@ -320,26 +355,8 @@ function isValidPawnMove(selectedRow, selectedCol, newRow, newCol) {
         }
     }
 
-    // Check if the pawn is capturing one cell diagonally
-    if (Math.abs(newCol - selectedCol) === 1 && newRow === selectedRow + direction) {
-        const targetCell = document.querySelector(`.cell[data-row='${newRow}'][data-col='${newCol}']`);
-        const opposingPlayerClass = currentPlayer === 'white' ? 'black-piece' : 'white-piece';
-
-        // Check if there's an opposing piece in the diagonal cell
-        if (targetCell.classList.contains(opposingPlayerClass)) {
-            return true; // Allow capturing
-        }
-    }
-
     return false; // Default: invalid move
 }
-
-function isValidPawnAttack(pawnRow, pawnCol, kingRow, kingCol) {
-    const direction = currentPlayer === 'white' ? -1 : 1;
-    const targetRow = kingRow + direction;
-    return Math.abs(pawnCol - kingCol) === 1 && targetRow === pawnRow;
-}
-
 
 // Check if a move is valid for a rook
 function isValidRookMove(selectedRow, selectedCol, newRow, newCol) {
@@ -453,77 +470,53 @@ function isValidKingMove(selectedRow, selectedCol, newRow, newCol) {
     return rowDiff <= 1 && colDiff <= 1;
 }
 
+// Check if the current player's king is in check
 function isCurrentPlayerKingInCheck() {
-    // Find the current player's king cell
     let kingCell = null;
-    const allCells = document.querySelectorAll('.cell');
     const currentPlayerClass = currentPlayer === 'white' ? 'white-piece' : 'black-piece';
-    const opposingPlayerClass = currentPlayer === 'white' ? 'black-piece' : 'white-piece';
 
-    for (let cell of allCells) {
-        if (cell.classList.contains(currentPlayerClass) && cell.textContent === '♔') {
+    // Find the current player's king cell
+    const allCells = document.querySelectorAll('.cell');
+    allCells.forEach(cell => {
+        if (cell.textContent === PIECES.KING && cell.classList.contains(currentPlayerClass)) {
             kingCell = cell;
-            break;
         }
-    }
+    });
 
     if (!kingCell) {
-        console.error("King not found!");
-        return false; // King not found
-    }
-
-    let kingRow = parseInt(kingCell.dataset.row);
-    let kingCol = parseInt(kingCell.dataset.col);
-
-    for (let cell of allCells) {
-        if (cell.classList.contains(opposingPlayerClass)) {
-            const pieceType = cell.textContent;
-            const row = parseInt(cell.dataset.row);
-            const col = parseInt(cell.dataset.col);
-            if (checkValidMove(pieceType, row, col, kingRow, kingCol) || (pieceType === PIECES.PAWN && isValidPawnAttack(row, col, kingRow, kingCol))) {
-                return true; // Current player's king is in check
-            }
-        }
-    }
-
-    return false; // Current player's king is not in check
-}
-
-function isCheckmate() {
-    if (!isCurrentPlayerKingInCheck()) {
+        console.error("King not found");
         return false;
     }
 
-    const allCells = document.querySelectorAll('.cell');
+    // Check if the king cell is under threat
+    if (kingCell) {
+        const kingRow = parseInt(kingCell.dataset.row);
+        const kingCol = parseInt(kingCell.dataset.col);
 
-    for (let i = 0; i < allCells.length; i++) {
-        const cell = allCells[i];
-        if (cell.classList.contains(currentPlayer === 'white' ? 'white-piece' : 'black-piece')) {
-            const selectedRow = parseInt(cell.dataset.row);
-            const selectedCol = parseInt(cell.dataset.col);
-            for (let j = 0; j < allCells.length; j++) {
-                const targetCell = allCells[j];
-                const newRow = parseInt(targetCell.dataset.row);
-                const newCol = parseInt(targetCell.dataset.col);
-                if (checkValidMove(cell.textContent, selectedRow, selectedCol, newRow, newCol)) {
-                    const pieceAtTargetCell = targetCell.textContent;
-                    const pieceAtSelectedCell = cell.textContent;
-                    targetCell.textContent = pieceAtSelectedCell;
-                    cell.textContent = '';
-                    const kingInCheck = isCurrentPlayerKingInCheck();
-                    // Undo the hypothetical move
-                    targetCell.textContent = pieceAtTargetCell;
-                    cell.textContent = pieceAtSelectedCell;
-                    // If the king is not in check after this move, it's not checkmate
-                    if (!kingInCheck) {
-                        return false;
-                    }
+        // Iterate over all cells to check for threats to the king
+        for (let i = 0; i < allCells.length; i++) {
+            const cell = allCells[i];
+            if (!cell.classList.contains(currentPlayerClass))
+            {
+                const newRow = parseInt(cell.dataset.row);
+                const newCol = parseInt(cell.dataset.col);
+                const pieceType = cell.textContent;
+
+                // Check if pawn can capture diagnally
+                let direction = currentPlayer === "white" ? -1 : 1;
+                // Check if the pawn is capturing one cell diagonally
+                if (Math.abs(newCol - kingCol) === 1 && newRow === kingRow + direction && pieceType === PIECES.PAWN) {
+                    return true; // King is in check 
+                }
+
+                if (checkValidMove(pieceType, newRow, newCol, kingRow, kingCol)) {
+                    return true; // King is in check
                 }
             }
         }
     }
 
-    return true;
+    return false; // King is not in check
 }
 
 generateChessboard();
