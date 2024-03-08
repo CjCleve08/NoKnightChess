@@ -86,6 +86,7 @@ const PIECES = {
     QUEEN: '♕',
     KING: '♔',
     PAWN: '♙',
+    KNIGHT: '♘',
 };
 
 function playSound(soundStr) {
@@ -239,14 +240,16 @@ function movePiece(selectedPiece, newRow, newCol) {
 
             switch (true) {
                 case pieceType === PIECES.PAWN && newRow === (currentPlayer === 'white' ? 0 : 5) && targetCell.classList.contains(opposingPlayerClass):
-                    targetCell.textContent = PIECES.QUEEN;
+                    //targetCell.textContent = PIECES.KNIGHT;
+                    promotePawn(targetCell);
                     // Check if the target cell contains the opposing player's piece color class
                     targetCell.classList.remove(opposingPlayerClass); // Remove the opposing player's color class
                     playSound("promoteSound"); // Play capture sound
                     break;
 
                 case pieceType === PIECES.PAWN && newRow === (currentPlayer === 'white' ? 0 : 5):
-                    targetCell.textContent = PIECES.QUEEN;
+                    //targetCell.textContent = PIECES.KNIGHT;
+                    promotePawn(targetCell);
                     playSound("promoteSound"); // Play promote sound
                     break;
 
@@ -310,6 +313,20 @@ function movePiece(selectedPiece, newRow, newCol) {
     }
 }
 
+// Promote a pawn
+function promotePawn(selectedPiece, newRow, newCol) {
+    const promotionOptions = [PIECES.ROOK, PIECES.BISHOP, PIECES.KNIGHT, PIECES.QUEEN];
+    let promotionChoice;
+    
+    do {
+        promotionChoice = prompt("Choose a piece to promote to: \n1. Rook \n2. Bishop \n3. Knight \n4. Queen");
+    } while (promotionChoice < 1 || promotionChoice > 4 || isNaN(promotionChoice));
+
+    const pieceType = promotionOptions[promotionChoice - 1]; // Convert choice to piece type
+    selectedPiece.textContent = pieceType;
+}
+
+
 // Check if a move is valid for a specific piece type
 function checkValidMove(pieceType, selectedRow, selectedCol, newRow, newCol) {
     switch(pieceType) {
@@ -319,6 +336,8 @@ function checkValidMove(pieceType, selectedRow, selectedCol, newRow, newCol) {
             return isValidRookMove(selectedRow, selectedCol, newRow, newCol);
         case PIECES.BISHOP:
             return isValidBishopMove(selectedRow, selectedCol, newRow, newCol);
+        case PIECES.KNIGHT:
+            return isValidKnightMove(selectedRow, selectedCol, newRow, newCol);
         case PIECES.QUEEN:
             return isValidQueenMove(selectedRow, selectedCol, newRow, newCol);
         case PIECES.KING:
@@ -419,6 +438,14 @@ function isValidBishopMove(selectedRow, selectedCol, newRow, newCol) {
     }
 
     return true; // Valid move
+}
+
+function isValidKnightMove(selectedRow, selectedCol, newRow, newCol) {
+    const rowDiff = Math.abs(newRow - selectedRow);
+    const colDiff = Math.abs(newCol - selectedCol);
+    
+    // A knight moves in an L-shape: 2 squares in one direction and 1 square in another direction
+    return (rowDiff === 2 && colDiff === 1) || (rowDiff === 1 && colDiff === 2);
 }
 
 // Check if a move is valid for a queen (combining rook and bishop moves)
