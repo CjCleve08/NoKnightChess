@@ -69,6 +69,7 @@
     <audio id="captureSound" src="capture.mp3"></audio>
     <audio id="illegalMoveSound" src="illegal-move.mp3"></audio>
     <audio id="checkSound" src="move-check.mp3"></audio>
+    <audio id="checkmateSound" src="game-end.mp3"></audio>
 
     <div class="board" id="chessBoard">
         <!-- Chess board cells will be dynamically generated here -->
@@ -88,8 +89,8 @@ const PIECES = {
 };
 
 function playSound(soundStr) {
-     const Sound = document.getElementById(soundStr);
-    Sound.play();
+    const sound = document.getElementById(soundStr);
+    sound.play(); // Play the selected sound
 }
 
 function generateChessboard() {
@@ -287,10 +288,21 @@ function movePiece(selectedPiece, newRow, newCol) {
             // Change player turn
             currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
 
-            // Check for check and checkmate
+            // Check for check and checkmate and stalemate
             if (isCurrentPlayerKingInCheck) {
                 playSound("checkSound");
             }
+
+            if (isCheckmate() && !isCurrentPlayerKingInCheck()) {
+                playSound("checkmateSound");
+                alert("Stalemate! " + "Draw Game.");
+            }
+            else if (isCheckmate()) {
+                playSound("checkmateSound");
+                const Winner = currentPlayer === "white"? "Black" : "White";
+                alert("Checkmate! " + Winner + " Wins!");
+            }
+
         }
         else {
             playSound("illegalMoveSound");
@@ -517,6 +529,30 @@ function isCurrentPlayerKingInCheck() {
     }
 
     return false; // King is not in check
+}
+
+function isCheckmate() {
+    const currentPlayerClass = currentPlayer === 'white' ? 'white-piece' : 'black-piece';
+    let hasPossibleMove = false;
+
+    const allCells = document.querySelectorAll('.cell');
+    allCells.forEach(cell => {
+        if (cell.classList.contains(currentPlayerClass)) {
+            highlightPossibleMoves(cell);
+        }
+    });
+
+    allCells.forEach(cell => {
+        if (cell.classList.contains("possible-move")) {
+            hasPossibleMove = true;
+        }
+    });
+
+    allCells.forEach(cell => {
+        cell.classList.remove("possible-move");
+    });
+
+    if (hasPossibleMove) {return false;} else {return true;};
 }
 
 generateChessboard();
