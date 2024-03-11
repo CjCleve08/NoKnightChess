@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>6x6 Chess Game</title>
+<title>Arcade Chess</title>
 <style>
     body {
       font-family: Arial, sans-serif;
@@ -17,9 +17,7 @@
     }
     .board {
       display: grid;
-      grid-template-columns: repeat(6, 70px);
-      grid-template-rows: repeat(6, 70px);
-      border: 5px solid #000;
+      border: 5px solid black;
       background-color: #fff;
       box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
     }
@@ -71,13 +69,26 @@
     <audio id="checkSound" src="move-check.mp3"></audio>
     <audio id="checkmateSound" src="game-end.mp3"></audio>
 
+    <!-- Add game mode selection -->
+    <div>
+        <label for="gameMode">Select Game Mode:</label>
+        <select id="gameMode">
+            <option value="noknight">6x6 No knight Chess</option>
+            <option value="knightonly">6x6 Knight And Pawn Chess</option>
+            <option value="classic">Classic Chess</option>
+        </select>
+        <button onclick="startGame()">Start Game</button>
+    </div>
+
     <div class="board" id="chessBoard">
         <!-- Chess board cells will be dynamically generated here -->
     </div>
-
 <script>
 let selectedPiece = null;
 let currentPlayer = 'white';
+let gameMode = 'classic'; // Default game mode
+const board = document.getElementById('chessBoard');
+board.style.display = "none";
 
 // Define constants for piece types
 const PIECES = {
@@ -89,34 +100,150 @@ const PIECES = {
     KNIGHT: '♘',
 };
 
+// Define gamemodes
+const GAMEMODES = {
+    NOKNIGHTCHESS: 'noknight',
+    CLASSIC: 'classic',
+    KNIGHTONLYCHESS: 'knightonly'
+};
+
 function playSound(soundStr) {
     const sound = document.getElementById(soundStr);
     sound.play(); // Play the selected sound
 }
 
 function generateChessboard() {
-    const board = document.getElementById('chessBoard');
-    const pieces = ['♖', '♗', '♕', '♔', '♗', '♖'].reverse(); // Reverse the order of white pieces
-    const pawns = '♙'.repeat(6).split('').reverse().join(''); // Reverse the order of white pawns
+    const noKnightChessPieces = ['♖', '♗', '♕', '♔', '♗', '♖'].reverse(); // Reverse the order of white pieces
+    const ClassicChessPieces = ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖'].reverse();
+    const knightOnlyChessPieces = ['♘', '♘', '♔', '♘', '♘', '♘'].reverse();
 
-    for (let i = 0; i < 6; i++) {
-       for (let j = 0; j < 6; j++) {
-            const cell = document.createElement('div');
-            cell.classList.add('cell', (i + j) % 2 === 0 ? 'light' : 'dark');
-            const piece = i === 0 ? pieces[j] : (i === 1 ? pawns[j] : (i === 4 ? pawns[j].toUpperCase() : (i === 5 ? pieces[j].toUpperCase() : '')));
-            cell.textContent = piece;
-            if (piece !== '') {
-                cell.classList.add(i <= 1 ? 'black-piece' : 'white-piece'); // Reverse the piece color classes
+    switch(gameMode) {
+        case GAMEMODES.NOKNIGHTCHESS:
+            pawns = '♙'.repeat(6).split('').reverse().join(''); // Reverse the order of white pawns
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 6; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell', (i + j) % 2 === 0 ? 'light' : 'dark');
+                    const piece = i === 0 ? noKnightChessPieces[j] : (i === 1 ? pawns[j] : (i === 4 ? pawns[j].toUpperCase() : (i === 5 ? noKnightChessPieces[j].toUpperCase() : '')));
+                    cell.textContent = piece;
+                    if (piece !== '') {
+                        cell.classList.add(i <= 1 ? 'black-piece' : 'white-piece'); // Reverse the piece color classes
+                    }
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    board.appendChild(cell);
+                }
             }
-            cell.dataset.row = i;
-            cell.dataset.col = j;
-            board.appendChild(cell);
-       }
+            break;
+
+        case GAMEMODES.CLASSIC:
+            pawns = '♙'.repeat(8).split('').reverse().join(''); // Reverse the order of white pawns
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell', (i + j) % 2 === 0 ? 'light' : 'dark');
+                    let piece = '';
+                    if (i === 0 || i === 7) {
+                        // Place the classic chess pieces on the first and last row
+                        piece = ClassicChessPieces[j];
+                    } else if (i === 1 || i === 6) {
+                        // Place pawns on the second and second-to-last row
+                        piece = pawns[j];
+                        if (i === 6) piece = piece.toUpperCase(); // Convert pawns to uppercase for white
+                    }
+                    cell.textContent = piece;
+                    if (piece !== '') {
+                        cell.classList.add(i <= 1 ? 'black-piece' : 'white-piece'); // Reverse the piece color classes
+                    }
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    board.appendChild(cell);
+                }
+            }
+            break;
+
+        case GAMEMODES.KNIGHTONLYCHESS:
+            pawns = '♙'.repeat(6).split('').reverse().join(''); // Reverse the order of white pawns
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 6; j++) {
+                    const cell = document.createElement('div');
+                    cell.classList.add('cell', (i + j) % 2 === 0 ? 'light' : 'dark');
+                    const piece = i === 0 ? knightOnlyChessPieces[j] : (i === 1 ? pawns[j] : (i === 4 ? pawns[j].toUpperCase() : (i === 5 ? knightOnlyChessPieces[j].toUpperCase() : '')));
+                    cell.textContent = piece;
+                    if (piece !== '') {
+                        cell.classList.add(i <= 1 ? 'black-piece' : 'white-piece'); // Reverse the piece color classes
+                    }
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    board.appendChild(cell);
+                }
+            }
+            break;
     }
+
+    setGridTemplate();
     
     board.addEventListener('click', function(event) {
         selectPiece(event);
     });
+}
+
+// Function to set the grid template rows and columns based on the game mode
+function setGridTemplate() {
+    let rows, columns;
+
+    // Set the rows and columns based on the game mode
+    switch (gameMode) {
+        case GAMEMODES.KNIGHTONLYCHESS:
+        case GAMEMODES.NOKNIGHTCHESS:
+            rows = 6;
+            columns = 6;
+            break;
+        // Add more cases for other game modes if needed
+        default:
+            rows = 8;
+            columns = 8;
+            break;
+    }
+
+    // Apply the grid template to the chess board
+    const boardElement = document.getElementById('chessBoard');
+    boardElement.style.gridTemplateColumns = `repeat(${columns}, 70px)`;
+    boardElement.style.gridTemplateRows = `repeat(${rows}, 70px)`;
+}
+
+// Start the game based on selected game mode
+function startGame() {
+    const gameModeSelect = document.getElementById('gameMode');
+    gameMode = gameModeSelect.value;
+
+    // Hide the game mode selection elements
+    hideGameModeSelection();
+
+    // Clear the board
+    const board = document.getElementById('chessBoard');
+    board.innerHTML = '';
+
+    // Generate the chessboard based on the selected game mode
+    generateChessboard();
+}
+
+// Function to hide the game mode selection elements
+function hideGameModeSelection() {
+    const gameModeSelect = document.getElementById('gameMode');
+    gameModeSelect.style.display = 'none';
+    board.style.display = "grid";
+    document.querySelector('label[for="gameMode"]').style.display = 'none';
+    document.querySelector('button').style.display = 'none';
+}
+
+// Function to show the game mode selection elements
+function showGameModeSelection() {
+    const gameModeSelect = document.getElementById('gameMode');
+    gameModeSelect.style.display = 'block';
+    board.style.display = 'none';
+    document.querySelector('label[for="gameMode"]').style.display = 'block';
+    document.querySelector('button').style.display = 'block';
 }
 
 // Select a piece
@@ -220,6 +347,18 @@ function movePiece(selectedPiece, newRow, newCol) {
     const currentPlayerClass = currentPlayer === 'white' ? 'white-piece' : 'black-piece';
     const opposingPlayerClass = currentPlayer === 'white' ? 'black-piece' : 'white-piece';
     let capturedPiece = ''; // Variable to store the captured piece
+    let lastRow = 7; // Default 7
+
+    switch(gameMode) {
+        case GAMEMODES.KNIGHTONLYCHESS:
+        case GAMEMODES.NOKNIGHTCHESS:
+            lastRow = 5;
+            break;
+
+        default:
+            lastRow = 7;
+            break;
+    }
     
     if (!targetCell.textContent || targetCell.classList.contains(opposingPlayerClass)) {
         const pieceType = selectedPiece.textContent;
@@ -239,7 +378,7 @@ function movePiece(selectedPiece, newRow, newCol) {
             targetCell.textContent = pieceType;
 
             switch (true) {
-                case pieceType === PIECES.PAWN && newRow === (currentPlayer === 'white' ? 0 : 5) && targetCell.classList.contains(opposingPlayerClass):
+                case pieceType === PIECES.PAWN && newRow === (currentPlayer === 'white' ? 0 : lastRow) && targetCell.classList.contains(opposingPlayerClass):
                     //targetCell.textContent = PIECES.KNIGHT;
                     promotePawn(targetCell);
                     // Check if the target cell contains the opposing player's piece color class
@@ -247,7 +386,7 @@ function movePiece(selectedPiece, newRow, newCol) {
                     playSound("promoteSound"); // Play capture sound
                     break;
 
-                case pieceType === PIECES.PAWN && newRow === (currentPlayer === 'white' ? 0 : 5):
+                case pieceType === PIECES.PAWN && newRow === (currentPlayer === 'white' ? 0 : lastRow):
                     //targetCell.textContent = PIECES.KNIGHT;
                     promotePawn(targetCell);
                     playSound("promoteSound"); // Play promote sound
@@ -291,21 +430,17 @@ function movePiece(selectedPiece, newRow, newCol) {
             // Change player turn
             currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
 
-            // Check for check and checkmate and stalemate
+            // Check for game over
             if (isCurrentPlayerKingInCheck) {
                 playSound("checkSound");
             }
 
             if (isCheckmate() && !isCurrentPlayerKingInCheck()) {
-                playSound("checkmateSound");
-                alert("Stalemate! " + "Draw Game.");
+                Gameover("stalemate")
             }
             else if (isCheckmate()) {
-                playSound("checkmateSound");
-                const Winner = currentPlayer === "white"? "Black" : "White";
-                alert("Checkmate! " + Winner + " Wins!");
+                Gameover("checkmate");
             }
-
         }
         else {
             playSound("illegalMoveSound");
@@ -313,14 +448,32 @@ function movePiece(selectedPiece, newRow, newCol) {
     }
 }
 
+function Gameover(typeOfGameWon) {
+    showGameModeSelection();
+    playSound("checkmateSound");
+
+    const Winner = currentPlayer === "white"? "Black" : "White";
+
+    switch (typeOfGameWon) {
+        case "checkmate":
+            alert("Checkmate! " + Winner + " Wins!");
+            break;
+
+        case "stalemate":
+            alert("Stalemate! " + "Draw Game.");
+            break;
+    }
+
+}
+
 // Promote a pawn
 function promotePawn(selectedPiece, newRow, newCol) {
-    const promotionOptions = [PIECES.ROOK, PIECES.BISHOP, PIECES.KNIGHT, PIECES.QUEEN];
+    const promotionOptions = [PIECES.KNIGHT, PIECES.QUEEN];
     let promotionChoice;
     
     do {
-        promotionChoice = prompt("Choose a piece to promote to: \n1. Rook \n2. Bishop \n3. Knight \n4. Queen");
-    } while (promotionChoice < 1 || promotionChoice > 4 || isNaN(promotionChoice));
+        promotionChoice = prompt("Choose a piece to promote to: \n1. Knight \n2. Queen");
+    } while (promotionChoice < 1 || promotionChoice > 2 || isNaN(promotionChoice));
 
     const pieceType = promotionOptions[promotionChoice - 1]; // Convert choice to piece type
     selectedPiece.textContent = pieceType;
@@ -349,9 +502,22 @@ function checkValidMove(pieceType, selectedRow, selectedCol, newRow, newCol) {
 
 // Check if a move is valid for a pawn
 function isValidPawnMove(selectedRow, selectedCol, newRow, newCol) {
-    const direction = currentPlayer === 'white' ? -1 : 1;
-    const initialRow = currentPlayer === 'white' ? 4 : 1; // Initial row for white and black pawns
-    const isInitialMove = selectedRow === initialRow; // Check if it's the pawn's initial move
+    let direction, initialRow;
+
+    switch(gameMode) {
+        case GAMEMODES.KNIGHTONLYCHESS:
+        case GAMEMODES.NOKNIGHTCHESS:
+            direction = currentPlayer === 'white' ? -1 : 1;
+            initialRow = currentPlayer === 'white' ? 5 : 1; // Initial row for white and black pawns
+            break;
+
+        default:
+            direction = currentPlayer === 'white' ? -1 : 1;
+            initialRow = currentPlayer === 'white' ? 6 : 1; // Initial row for white and black pawns
+            break;
+    }
+
+    const isInitialMove = selectedRow === initialRow || selectedRow === initialRow + direction; // Check if it's the pawn's initial move or next to initial
 
     // Check if the pawn is capturing one cell diagonally
     if (Math.abs(newCol - selectedCol) === 1 && newRow === selectedRow + direction) {
@@ -581,8 +747,6 @@ function isCheckmate() {
 
     if (hasPossibleMove) {return false;} else {return true;};
 }
-
-generateChessboard();
 </script>
 </body>
 </html>
